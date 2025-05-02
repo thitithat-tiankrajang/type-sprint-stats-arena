@@ -1,16 +1,18 @@
-
+// src/pages/Index.tsx (modified)
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { useAuth } from '../hooks/useauth';
+import StatsDashboard from '../components/StatsDashboard';
 
 const Index = () => {
-  const { currentUser } = useAuth();
+  const { currentUser, isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
   return (
     <div className="min-h-[calc(100vh-64px)] flex flex-col items-center justify-center p-6">
-      <div className="max-w-3xl text-center space-y-6">
+      <div className="max-w-4xl text-center space-y-6">
         <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent animate-fade-in">
           TypeSprint
         </h1>
@@ -25,7 +27,7 @@ const Index = () => {
                 Start Typing Test
               </Button>
               <Button variant="outline" size="lg" onClick={() => navigate('/stats')}>
-                View Statistics
+                View Full Statistics
               </Button>
             </>
           ) : (
@@ -40,7 +42,16 @@ const Index = () => {
           )}
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-12 animate-fade-in" style={{ animationDelay: '300ms' }}>
+        {isAuthenticated && (
+          <div className="pt-8 animate-fade-in" style={{ animationDelay: '300ms' }}>
+            <Card className="p-6">
+              <h2 className="text-2xl font-bold mb-4 text-left">Your Stats Dashboard</h2>
+              <StatsDashboard compact />
+            </Card>
+          </div>
+        )}
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-12 animate-fade-in" style={{ animationDelay: '400ms' }}>
           <div className="p-6 rounded-lg bg-card border border-border">
             <h3 className="text-xl font-bold mb-2">Measure Speed</h3>
             <p className="text-muted-foreground">Track your WPM and see how you improve over time</p>

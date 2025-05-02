@@ -8,8 +8,8 @@ import { generateWords, calculateAccuracy } from '../utils/wordUtils';
 import { calculateWPM, saveTestResult, formatTime } from '../utils/testUtils';
 import { TestStats } from '../types';
 
-const WORD_COUNT = 40;
-const TEST_DURATION = 60; // seconds
+const WORD_COUNT = 5;
+const TEST_DURATION = 10; // seconds
 
 const TypingTest: React.FC = () => {
   const [words, setWords] = useState<string[]>([]);
