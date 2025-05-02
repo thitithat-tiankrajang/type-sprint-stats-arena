@@ -17,7 +17,8 @@ import NotFound from "./pages/NotFound";
 import NavBar from "./components/NavBar";
 
 // Context
-import { AuthProvider, useAuth } from "./contexts/AuthContext";
+import AuthProvider from "./contexts/AuthProvider";
+import { useAuth } from "./hooks/useauth";
 
 const queryClient = new QueryClient({
   defaultOptions: {

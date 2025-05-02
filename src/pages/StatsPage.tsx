@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import StatisticsChart from '../components/StatisticsChart';
 import { getTestResults } from '../utils/testUtils';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../hooks/useauth';
 import { TestResult } from '../types';
 
 const StatsPage: React.FC = () => {
