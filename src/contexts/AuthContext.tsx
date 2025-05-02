@@ -1,16 +1,5 @@
-
+// src/contexts/AuthContext.tsx (updated)
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { 
-  User as FirebaseUser,
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  signOut as firebaseSignOut,
-  onAuthStateChanged,
-  sendPasswordResetEmail,
-  updateProfile,
-  sendEmailVerification
-} from 'firebase/auth';
-import { auth } from '../firebase/config';
 import { User } from '../types';
 
 interface AuthContextType {
@@ -25,6 +14,8 @@ interface AuthContextType {
   isAuthenticated: boolean;
 }
 
+const API_URL = 'http://localhost:5000/api';
+
 const AuthContext = createContext<AuthContextType>({
   currentUser: null,
   loading: true,
@@ -37,75 +28,151 @@ const AuthContext = createContext<AuthContextType>({
   isAuthenticated: false
 });
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-
-  // Convert FirebaseUser to our User type
-  const formatUser = (user: FirebaseUser | null): User | null => {
-    if (!user) return null;
-    return {
-      uid: user.uid,
-      email: user.email,
-      displayName: user.displayName
-    };
-  };
+  const [token, setToken] = useState<string | null>(null);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      const formattedUser = formatUser(user);
-      setCurrentUser(formattedUser);
-      setIsAuthenticated(!!formattedUser);
+    // Check if token exists in localStorage
+    const storedToken = localStorage.getItem('token');
+    
+    if (storedToken) {
+      setToken(storedToken);
+      fetchCurrentUser(storedToken);
+    } else {
       setLoading(false);
-    });
-
-    // Cleanup subscription on unmount
-    return () => unsubscribe();
+    }
   }, []);
 
-  // Sign in with email and password
+  const fetchCurrentUser = async (authToken: string) => {
+    try {
+      const response = await fetch(`${API_URL}/auth/me`, {
+        headers: {
+          'Authorization': `Bearer ${authToken}`
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const user: User = {
+          uid: data.data._id,
+          email: data.data.email,
+          displayName: data.data.displayName
+        };
+        setCurrentUser(user);
+        setIsAuthenticated(true);
+      } else {
+        // Token might be invalid or expired
+        localStorage.removeItem('token');
+        setToken(null);
+      }
+    } catch (error) {
+      console.error('Error fetching user:', error);
+      localStorage.removeItem('token');
+      setToken(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const signIn = async (email: string, password: string): Promise<void> => {
-    await signInWithEmailAndPassword(auth, email, password);
+    try {
+      const response = await fetch(`${API_URL}/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ email, password })
+      });
+
+      if (!response.ok) {
+        throw new Error('Login failed');
+      }
+
+      const data = await response.json();
+      localStorage.setItem('token', data.token);
+      setToken(data.token);
+      await fetchCurrentUser(data.token);
+    } catch (error) {
+      console.error('Login error:', error);
+      throw error;
+    }
   };
 
-  // Sign up with email and password
   const signUp = async (email: string, password: string, displayName?: string): Promise<void> => {
-    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    // Update profile if display name is provided
-    if (displayName && userCredential.user) {
-      await updateProfile(userCredential.user, { displayName });
-      // Send verification email
-      await sendEmailVerification(userCredential.user);
+    try {
+      const response = await fetch(`${API_URL}/auth/register`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ email, password, displayName })
+      });
+
+      if (!response.ok) {
+        throw new Error('Registration failed');
+      }
+
+      const data = await response.json();
+      localStorage.setItem('token', data.token);
+      setToken(data.token);
+      await fetchCurrentUser(data.token);
+    } catch (error) {
+      console.error('Registration error:', error);
+      throw error;
     }
   };
 
-  // Sign out
   const signOut = async (): Promise<void> => {
-    await firebaseSignOut(auth);
+    localStorage.removeItem('token');
+    setToken(null);
+    setCurrentUser(null);
+    setIsAuthenticated(false);
   };
 
-  // Reset password
   const resetPassword = async (email: string): Promise<void> => {
-    await sendPasswordResetEmail(auth, email);
+    // This would need to be implemented on the backend
+    console.warn('Password reset not yet implemented in the backend');
   };
 
-  // Update user profile
   const updateUserProfile = async (displayName: string): Promise<void> => {
-    if (auth.currentUser) {
-      await updateProfile(auth.currentUser, { displayName });
+    if (!token) throw new Error('Not authenticated');
+    
+    try {
+      const response = await fetch(`${API_URL}/users/profile`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ displayName })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update profile');
+      }
+
+      const data = await response.json();
+      
       // Update local user state
-      setCurrentUser(prev => prev ? { ...prev, displayName } : null);
+      setCurrentUser(prev => prev ? { 
+        ...prev, 
+        displayName: data.data.displayName 
+      } : null);
+    } catch (error) {
+      console.error('Profile update error:', error);
+      throw error;
     }
   };
 
-  // Send verification email
   const sendVerificationEmail = async (): Promise<void> => {
-    if (auth.currentUser) {
-      await sendEmailVerification(auth.currentUser);
-    }
+    // This would need to be implemented on the backend
+    console.warn('Email verification not yet implemented in the backend');
   };
 
   const value: AuthContextType = {
