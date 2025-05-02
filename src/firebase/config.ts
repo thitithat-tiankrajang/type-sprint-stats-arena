@@ -1,10 +1,9 @@
 
 import { initializeApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+import { getAuth, connectAuthEmulator, browserLocalPersistence, setPersistence } from 'firebase/auth';
+import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore';
 
-// Your web app's Firebase configuration
-// Replace these with your Firebase config
+// Firebase configuration - in production, use environment variables
 const firebaseConfig = {
   apiKey: "AIzaSyA-example-key-replace-this",
   authDomain: "typing-app.firebaseapp.com",
@@ -18,5 +17,16 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
+
+// Set persistent auth state (survives page refreshes)
+setPersistence(auth, browserLocalPersistence).catch((error) => {
+  console.error("Authentication persistence error:", error);
+});
+
+// Connect to emulators in development for local testing (if needed)
+if (import.meta.env.DEV && import.meta.env.VITE_USE_FIREBASE_EMULATORS === 'true') {
+  connectAuthEmulator(auth, 'http://localhost:9099');
+  connectFirestoreEmulator(db, 'localhost', 8080);
+}
 
 export { app, auth, db };

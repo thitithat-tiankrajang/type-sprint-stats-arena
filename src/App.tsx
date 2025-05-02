@@ -3,7 +3,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { Loader2 } from "lucide-react";
 
 // Pages
 import Index from "./pages/Index";
@@ -18,22 +19,62 @@ import NavBar from "./components/NavBar";
 // Context
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
-// Protected route component
+// Enhanced protected route component with redirect preservation
 const ProtectedRoute = ({ 
   children 
 }: { 
   children: React.ReactNode 
 }) => {
-  const { currentUser, loading } = useAuth();
+  const { currentUser, loading, isAuthenticated } = useAuth();
+  const location = useLocation();
   
   if (loading) {
-    return <div className="flex items-center justify-center h-screen">Loading...</div>;
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        <span className="sr-only">Loading</span>
+      </div>
+    );
   }
   
-  if (!currentUser) {
-    return <Navigate to="/auth" replace />;
+  if (!isAuthenticated) {
+    // Redirect to auth page but save the location they tried to access
+    return <Navigate to="/auth" state={{ from: location }} replace />;
+  }
+  
+  return <>{children}</>;
+};
+
+// Route for already authenticated users (redirect away from auth pages)
+const PublicOnlyRoute = ({
+  children
+}: {
+  children: React.ReactNode
+}) => {
+  const { isAuthenticated, loading } = useAuth();
+  const location = useLocation();
+  const from = location.state?.from?.pathname || '/';
+  
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        <span className="sr-only">Loading</span>
+      </div>
+    );
+  }
+  
+  if (isAuthenticated) {
+    return <Navigate to={from} replace />;
   }
   
   return <>{children}</>;
@@ -45,7 +86,14 @@ const AppRoutes = () => {
       <NavBar />
       <Routes>
         <Route path="/" element={<Index />} />
-        <Route path="/auth" element={<AuthPage />} />
+        <Route 
+          path="/auth" 
+          element={
+            <PublicOnlyRoute>
+              <AuthPage />
+            </PublicOnlyRoute>
+          } 
+        />
         <Route 
           path="/type" 
           element={
