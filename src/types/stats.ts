@@ -1,20 +1,35 @@
 // src/types/stats.ts
-export interface Stat {
+export interface TestResult {
     _id: string;
-    userId: string;
-    title: string;
-    value: number;
-    unit: 'wpm' | 'accuracy' | 'time' | 'count' | 'custom';
-    category: 'speed' | 'accuracy' | 'progress' | 'achievement' | 'custom';
-    icon?: string;
-    color?: string;
-    isPublic: boolean;
-    createdAt: string;
+    date: string;
+    wpm: number;
+    accuracy: number;
+    duration: number;
+    characterCount: number;
+    correctChars: number;
+    errorCount: number;
+    isPersonalBest?: {
+      wpm: boolean;
+      accuracy: boolean;
+    };
   }
   
-  export interface StatSummary {
-    topSpeed: Stat | null;
-    topAccuracy: Stat | null;
-    totalStats: number;
-    recentStats: Stat[];
+  export interface DashboardData {
+    recentTests: TestResult[];
+    personalBests: {
+      wpm: TestResult | null;
+      accuracy: TestResult | null;
+      totalChars: TestResult | null;
+    };
+    averages: {
+      avgWPM: number;
+      avgAccuracy: number;
+      totalTests: number;
+      totalChars: number;
+    };
+    trends: {
+      wpmChange: number;
+      accuracyChange: number;
+    } | null;
+    skillLevel: string;
   }

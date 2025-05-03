@@ -1,6 +1,7 @@
-// src/services/statsService.ts
-import { Stat, StatSummary } from '../types/stats';
+// src/services/statsService.ts (fixed)
+import { TestResult, DashboardData } from '../types/stats';
 
+// Use environment variable or a safe default
 const API_URL = 'http://localhost:5003/api';
 
 // Get auth token
@@ -13,37 +14,42 @@ const getToken = (): string | null => {
   }
 };
 
-// Create a new stat
-export const createStat = async (statData: Omit<Stat, 'id' | 'userId' | 'createdAt'>): Promise<Stat> => {
+// Save test result in a single API call
+export const saveTestResult = async (testData: {
+  wpm: number;
+  accuracy: number;
+  duration: number;
+  characterCount: number;
+  correctChars: number;
+  errorCount: number;
+}): Promise<TestResult> => {
   const token = getToken();
   if (!token) throw new Error('Not authenticated');
 
-  const response = await fetch(`${API_URL}/stats`, {
+  const response = await fetch(`${API_URL}/tests`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${token}`
     },
-    body: JSON.stringify(statData)
+    body: JSON.stringify(testData)
   });
 
   if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.error || 'Failed to create stat');
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || 'Failed to save test result');
   }
 
   const data = await response.json();
   return data.data;
 };
 
-// Get all stats with pagination and filtering
-export const getStats = async (
+// Get user's test history
+export const getTestHistory = async (
   page = 1,
-  limit = 10,
-  category?: string,
-  sortBy?: string
+  limit = 10
 ): Promise<{
-  stats: Stat[];
+  tests: TestResult[];
   pagination: {
     current: number;
     total: number;
@@ -54,31 +60,21 @@ export const getStats = async (
   const token = getToken();
   if (!token) throw new Error('Not authenticated');
 
-  let url = `${API_URL}/stats?page=${page}&limit=${limit}`;
-  
-  if (category) {
-    url += `&category=${category}`;
-  }
-  
-  if (sortBy) {
-    url += `&sortBy=${sortBy}`;
-  }
-
-  const response = await fetch(url, {
+  const response = await fetch(`${API_URL}/tests?page=${page}&limit=${limit}`, {
     headers: {
       'Authorization': `Bearer ${token}`
     }
   });
 
   if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.error || 'Failed to fetch stats');
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || 'Failed to fetch test history');
   }
 
   const data = await response.json();
   
   return {
-    stats: data.data,
+    tests: data.data,
     pagination: {
       current: page,
       total: Math.ceil((data.count || 0) / limit),
@@ -88,81 +84,20 @@ export const getStats = async (
   };
 };
 
-// Get stat by ID
-export const getStatById = async (id: string): Promise<Stat> => {
+// Get dashboard data
+export const getDashboardData = async (): Promise<DashboardData> => {
   const token = getToken();
   if (!token) throw new Error('Not authenticated');
 
-  const response = await fetch(`${API_URL}/stats/${id}`, {
+  const response = await fetch(`${API_URL}/tests/dashboard`, {
     headers: {
       'Authorization': `Bearer ${token}`
     }
   });
 
   if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.error || 'Failed to fetch stat');
-  }
-
-  const data = await response.json();
-  return data.data;
-};
-
-// Update a stat
-export const updateStat = async (id: string, statData: Partial<Stat>): Promise<Stat> => {
-  const token = getToken();
-  if (!token) throw new Error('Not authenticated');
-
-  const response = await fetch(`${API_URL}/stats/${id}`, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
-    },
-    body: JSON.stringify(statData)
-  });
-
-  if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.error || 'Failed to update stat');
-  }
-
-  const data = await response.json();
-  return data.data;
-};
-
-// Delete a stat
-export const deleteStat = async (id: string): Promise<void> => {
-  const token = getToken();
-  if (!token) throw new Error('Not authenticated');
-
-  const response = await fetch(`${API_URL}/stats/${id}`, {
-    method: 'DELETE',
-    headers: {
-      'Authorization': `Bearer ${token}`
-    }
-  });
-
-  if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.error || 'Failed to delete stat');
-  }
-};
-
-// Get stats summary
-export const getStatsSummary = async (): Promise<StatSummary> => {
-  const token = getToken();
-  if (!token) throw new Error('Not authenticated');
-
-  const response = await fetch(`${API_URL}/stats/summary`, {
-    headers: {
-      'Authorization': `Bearer ${token}`
-    }
-  });
-
-  if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.error || 'Failed to fetch stats summary');
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || 'Failed to fetch dashboard data');
   }
 
   const data = await response.json();
@@ -170,10 +105,7 @@ export const getStatsSummary = async (): Promise<StatSummary> => {
 };
 
 export const statsService = {
-  createStat,
-  getStats,
-  getStatById,
-  updateStat,
-  deleteStat,
-  getStatsSummary
+  saveTestResult,
+  getTestHistory,
+  getDashboardData
 };

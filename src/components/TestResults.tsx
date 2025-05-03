@@ -5,6 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { TestStats } from '../types';
 import { useAuth } from '../hooks/useauth';
 import { toast } from '@/components/ui/use-toast';
+import { useNavigate } from 'react-router-dom';
+import { Award, LineChart } from 'lucide-react';
 
 interface TestResultsProps {
   stats: TestStats;
@@ -14,74 +16,39 @@ interface TestResultsProps {
 const TestResults: React.FC<TestResultsProps> = ({ stats, onReset }) => {
   const { wpm, accuracy, correctChars, incorrectChars, elapsedTime } = stats;
   const { currentUser, isAuthenticated } = useAuth();
+  const navigate = useNavigate();
   
   useEffect(() => {
-    // Save test result to stats API
-    const saveStats = async () => {
+    // Save test result to database
+    const saveTestResult = async () => {
       if (!isAuthenticated || !currentUser) return;
       
       try {
-        // Get API URL from a variable that works in your environment
-        // For Vite:
         const API_URL = 'http://localhost:5003/api';
-        // For Create React App:        
         const token = localStorage.getItem('token');
         
         if (!token) return;
         
-        // Save WPM stat
-        await fetch(`${API_URL}/stats`, {
+        // Send all data in a single request
+        await fetch(`${API_URL}/tests`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`
           },
           body: JSON.stringify({
-            title: `Typing Speed: ${wpm} WPM`,
-            value: wpm,
-            unit: 'wpm',
-            category: 'speed',
-            icon: 'activity',
-            color: '#3498db'
+            wpm,
+            accuracy,
+            duration: elapsedTime,
+            characterCount: correctChars + incorrectChars,
+            correctChars,
+            errorCount: incorrectChars
           })
         });
         
-        // Save accuracy stat
-        await fetch(`${API_URL}/stats`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            title: `Typing Accuracy: ${accuracy.toFixed(0)}%`,
-            value: accuracy,
-            unit: 'accuracy',
-            category: 'accuracy',
-            icon: 'check-circle',
-            color: '#2ecc71'
-          })
-        });
-        
-        // Save words typed count
-        await fetch(`${API_URL}/stats`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            title: `Total Characters: ${correctChars + incorrectChars}`,
-            value: correctChars + incorrectChars,
-            unit: 'count',
-            category: 'progress',
-            icon: 'type',
-            color: '#9b59b6'
-          })
-        });
-        
+        console.log('Test results saved successfully');
       } catch (error) {
-        console.error('Error saving stats:', error);
+        console.error('Error saving test result:', error);
         toast({
           title: 'Error',
           description: 'Failed to save your test results',
@@ -90,12 +57,15 @@ const TestResults: React.FC<TestResultsProps> = ({ stats, onReset }) => {
       }
     };
     
-    saveStats();
+    saveTestResult();
   }, [wpm, accuracy, correctChars, incorrectChars, elapsedTime, currentUser, isAuthenticated]);
+  
+  const handleViewStats = () => {
+    navigate('/stats');
+  };
   
   return (
     <div className="space-y-8 animate-fade-in">
-      {/* Rest of the component remains the same */}
       <div className="text-center">
         <h2 className="text-3xl font-bold mb-2">Test Complete!</h2>
         <p className="text-muted-foreground">Here's how you did:</p>
@@ -144,8 +114,32 @@ const TestResults: React.FC<TestResultsProps> = ({ stats, onReset }) => {
         </div>
       </div>
       
-      <div className="flex justify-center">
-        <Button onClick={onReset} className="px-6">Try Again</Button>
+      {/* Add new buttons section */}
+      <div className="flex flex-col sm:flex-row justify-center gap-4 animate-fade-in" style={{ animationDelay: '400ms' }}>
+        <Button 
+          onClick={onReset} 
+          className="px-8 py-4 text-lg"
+          size="lg"
+        >
+          Try Again
+        </Button>
+        <Button 
+          onClick={handleViewStats} 
+          variant="outline" 
+          className="px-8 py-4 text-lg"
+          size="lg"
+        >
+          <LineChart className="w-5 h-5 mr-2" />
+          View Statistics
+        </Button>
+      </div>
+      
+      {/* Add optional motivational message */}
+      <div className="text-center text-muted-foreground mt-6 animate-fade-in" style={{ animationDelay: '500ms' }}>
+        {wpm > 40 ? 
+          "Great speed! Check your stats to see your progress." :
+          "Keep practicing! View your stats to track your improvement."
+        }
       </div>
     </div>
   );

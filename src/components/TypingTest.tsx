@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import WordsDisplay from './WordDisplay';
@@ -40,6 +39,21 @@ const TypingTest: React.FC = () => {
     resetTest();
   }, []);
   
+  // Define endTest with useCallback to prevent recreation on each render
+  const endTest = useCallback(() => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+    }
+    
+    if (!isTestActive) return;
+    
+    setIsTestActive(false);
+    setIsTestComplete(true);
+    
+    // Save test results
+    saveTestResult(stats);
+  }, [isTestActive, stats]);
+  
   // Timer effect
   useEffect(() => {
     if (isTestActive && startTime !== null) {
@@ -71,7 +85,7 @@ const TypingTest: React.FC = () => {
         clearInterval(timerRef.current);
       }
     };
-  }, [isTestActive, startTime]);
+  }, [isTestActive, startTime, endTest]);
 
   // Focus on input when test starts
   useEffect(() => {
@@ -140,20 +154,6 @@ const TypingTest: React.FC = () => {
     if (timerRef.current) {
       clearInterval(timerRef.current);
     }
-  };
-  
-  const endTest = () => {
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-    }
-    
-    if (!isTestActive) return;
-    
-    setIsTestActive(false);
-    setIsTestComplete(true);
-    
-    // Save test results
-    saveTestResult(stats);
   };
   
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
